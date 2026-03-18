@@ -1,77 +1,144 @@
-# NGS-QC-Mapping-Variant-Calling-Pipeline
-End-to-end NGS pipeline for quality control, read trimming, BWA mapping, BAM processing, and biallelic SNP calling using FreeBayes on HPC systems.
+# NGS QC, Mapping & Variant Calling Pipeline
+
+End-to-end Next-Generation Sequencing (NGS) pipeline for:
+
+- Quality control (FastQC)
+
+- Read trimming (Trimmomatic)
+
+- Alignment (BWA-MEM)
+
+- BAM processing (SAMtools)
+
+- Variant calling (FreeBayes)
+
+- Biallelic SNP extraction (VCFtools)
+
+Designed for execution on HPC systems with module environments (e.g. Slurm)
+
+
+# Table of Contents
 
 ## Requirements
-HPC modules used:
-- sra-tools
-- fastqc
-- trimmomatic
-- bwa
-- samtools
-- vcftools
-- miniconda3 (for FreeBayes)
 
-## Step-by-Step Commands (Single Sample Example)
-Replace <...> with your filenames
+## Pipeline Overview
 
-## 0) Download FASTQ from SRA (optional)
+## Step-by-Step Workflow
+
+### 0. Download Data
+
+### 1. Quality Control (Raw Reads)
+
+### 2. Trimming
+
+### 3. Quality Control (Trimmed Reads)
+
+### 4. Reference Indexing
+
+### 5. Mapping (BWA-MEM)
+
+### 6. BAM Processing
+
+### 7. Read Count (QC Metric)
+
+### 8. Variant Calling (FreeBayes)
+
+### 9. Extract Biallelic SNPs
+
+## Notes
+
+
+# Requirements
+
+The pipeline assumes an HPC environment with the following modules:
+
+- ``` sra-tools ```
+
+- ``` fastqc ```
+
+- ``` trimmomatic ```
+
+- ``` bwa ```
+
+- ``` samtools ```
+
+- ``` vcftools ```
+
+- ``` miniconda3 ``` (for FreeBayes)
+
+
+# Pipeline Overview
+``` SRA → FASTQ → FastQC → Trimming → FastQC → BWA → BAM → Filtering → Sorting → Indexing → FreeBayes → VCF → SNP Filtering ```
+
+
+## Step-by-Step Workflow
+
+Replace ``` <...> ``` placeholders with your filenames.
+
+### 0. Download Data (Optional)
 
 ```
 module load gcc/14.2.0 sra-tools/3.0.3
-```
 
-```
-fastq-dump --split-files <accession_number>
+fasterq-dump <accession_number> --split-files
 ```
 
 Output:
-- <accession_number>_1.fastq
-- <accession_number>_2.fastq
 
-## 1) Quality Control (FastQC) — Raw Reads
+``` <accession_number>_1.fastq ```
+
+``` <accession_number>_2.fastq ```
+
+
+### 1. Quality Control (Raw Reads)
+
 ```
 module load gcc/14.2.0 fastqc/0.12.1
+
+fastqc -o fastqc_raw/ <reads_R1.fastq> <reads_R2.fastq>
 ```
 
-```
-fastqc <reads_R1.fastq> <reads_R2.fastq>
-```
+Inspect:
 
-### Inspect:
 - Per base sequence quality
+
 - Adapter content
+
 - Sequence duplication
 
-## 2) Trimming (Trimmomatic PE)
-### Produces:
-- Paired reads (*_P.fastq) → used for mapping
-- Unpaired reads (*_U.fastq) → optional
+
+### 2. Trimming (Trimmomatic)
 
 ```
-module load gcc/9.4.0-eewq4j6 trimmomatic/0.39-dlgljoz
+module load gcc/9.4.0 trimmomatic/0.39
 ```
 
 ```
-trimmomatic PE <reads_R1.fastq> <reads_R2.fastq> <sample>_R1_P.fastq <sample>_R1_U.fastq <sample>_R2_P.fastq <sample>_R2_U.fastq ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 LEADING:5 TRAILING:5 SLIDINGWINDOW:3:15 MINLEN:100
+trimmomatic PE -threads 8 \
+<reads_R1.fastq> <reads_R2.fastq> \
+<sample>_R1_P.fastq <sample>_R1_U.fastq \
+<sample>_R2_P.fastq <sample>_R2_U.fastq \
+ILLUMINACLIP:/path/to/TruSeq3-PE.fa:2:30:10 \
+LEADING:5 TRAILING:5 SLIDINGWINDOW:3:15 MINLEN:100
 ```
 
- ### Explanation of filters:
-- ILLUMINACLIP → remove adapters 
-- LEADING/TRAILING → remove low-quality ends
-- SLIDINGWINDOW → dynamic quality trimming
-- MINLEN → discard short reads
+Output:
 
-## 3) FastQC Again (Trimmed Reads)
+Paired reads: ``` *_P.fastq ``` (used for mapping)
+
+Unpaired reads: ``` *_U.fastq ``` (optional)
+
+
+### 3. Quality Control (Trimmed Reads)
 
 ```
-fastqc <sample>_R1_P.fastq <sample>_R2_P.fastq
+fastqc -o fastqc_trimmed/ <sample>_R1_P.fastq <sample>_R2_P.fastq
 ```
 
-### Confirm:
-- Adapter removal successful
-- Improved quality profiles
+Confirm improved quality and adapter removal
 
-## 4) Index Reference Genome (BWA)
+
+### 4. Reference Indexing
 
 ```
 module load gcc/14.2.0 bwa/0.7.17
@@ -79,88 +146,80 @@ module load gcc/14.2.0 bwa/0.7.17
 bwa index <reference.fasta>
 ```
 
-This generates index files required for mapping
+### 5. Mapping (BWA-MEM)
 
-## 5) Mapping (BWA-MEM via Slurm)
-
-Create a file:
+Create a Slurm script:
 
 ```
 vim map.sbatch
-```
-
-To be able to write press i and then insert:
-
-```
 #!/bin/bash
+#SBATCH --cpus-per-task=8
 ```
 
-The command "#!/bin/bash" instructs the system to call the "bash" command processor as a means to execute the following set of commands
-
 ```
-module load gcc/14.2.0 bwa/0.7.17
-bwa mem -t $SLURM_CPUS_PER_TASK <reference.fasta> <sample>_R1_P.fastq <sample>_R2_P.fastq > <sample>.sam
+module load gcc/14.2.0 bwa/0.7.17 samtools/1.19.2
 ```
 
-Save and quit
-
-``` :wq ```
-
-Outside the vim_file run:
-
 ```
-sbatch map.sbatch
+bwa mem -t $SLURM_CPUS_PER_TASK \
+<reference.fasta> \
+<sample>_R1_P.fastq <sample>_R2_P.fastq | \
+samtools view -b -o <sample>.bam
 ```
 
-Output: <your_sample>.sam
+Submit job:
 
-## 6) SAM → BAM + Filtering + Sorting + Indexing
+``` sbatch map.sbatch ```
+
+Output:
+
+``` <sample>.bam ```
+
+
+### 6. BAM Processing
 
 ```
 module load gcc/14.2.0 samtools/1.19.2
 ```
 
-- Convert SAM to BAM
-  
-```
-samtools view -h -b <sample>.sam > <sample>.bam
-```
+- Filter properly paired reads (MAPQ ≥ 20)
 
-- Keep properly paired reads with MAPQ ≥ 20
-  
 ```
 samtools view -f 0x02 -q 20 -b <sample>.bam > <sample>_pp_mq20.bam
 ```
 
 - Sort BAM
-  
+
 ```
-samtools sort <sample>_pp_mq20.bam -o <sample>_pp_mq20_sorted.bam
+samtools sort -@ 8 <sample>_pp_mq20.bam -o <sample>_pp_mq20_sorted.bam
 ```
 
-- Index BAM (required for variant calling)
-  
+- Index BAM
+
 ```
 samtools index <sample>_pp_mq20_sorted.bam
 ```
 
 - Alignment statistics
-  
+
 ```
 samtools flagstat <sample>.bam
+
 samtools flagstat <sample>_pp_mq20_sorted.bam
 ```
 
-## 7) Count Properly Paired Reads (MQ≥20)
+### 7. Read Count (QC Metric)
 
 ```
 samtools view -c -f 0x02 -q 20 <sample>.bam
 ```
 
-This gives the number of high-confidence mapped read pairs
+Returns number of high-confidence mapped read pairs
 
-## 8) Variant Calling (FreeBayes)
-- Activate conda
+
+### 8. Variant Calling (FreeBayes)
+
+- Activate Conda
 
 ```
 module load gcc/14.2.0 miniconda3
@@ -168,42 +227,55 @@ source $CONDA_PROFILE/conda.sh
 conda activate <your_env_name>
 ```
 
-- Install once:
-  
+- Install FreeBayes (one-time)
+
 ```
 conda install -c bioconda freebayes
-```
-
-- Index Reference FASTA (Required)
-  
-```
-module load gcc/14.2.0 samtools/1.19.2
+Index Reference
 samtools faidx <reference.fasta>
 ```
 
 - Run FreeBayes
-  
+
 ```
-freebayes -f <reference.fasta> -b <sample>_pp_mq20_sorted.bam -v <sample>.vcf
+freebayes -f <reference.fasta> -p 2 \
+-b <sample>_pp_mq20_sorted.bam \
+-v <sample>.vcf
 ```
 
-- Output: <your_sample>.vcf
+Output:
 
-## 9) Extract Biallelic SNPs Only (VCFtools)
+``` <sample>.vcf ```
+
+
+### 9. Extract Biallelic SNPs
 
 ```
 module load vcftools
-
-vcftools --vcf <sample>.vcf --min-alleles 2 --max-alleles 2 --remove-indels --recode --out <sample>_biallelic_snps
+vcftools --vcf <sample>.vcf \
+--min-alleles 2 --max-alleles 2 \
+--remove-indels \
+--recode --out <sample>_biallelic_snps
 ```
 
-- Count Biallelic SNPs
+Count SNPs
 
 ```
 grep -v '^#' <sample>_biallelic_snps.recode.vcf | wc -l
 ```
 
-### Notes
-- MAPQ ≥ 20 is a common confidence threshold.
-- Biallelic SNP filtering is particularly useful for downstream population genetics analyses.
-- For multi-sample studies, joint variant calling is recommended.
+# Notes
+
+- MAPQ ≥ 20 is a common threshold for high-confidence alignments
+
+- Explicitly set ploidy (-p) in FreeBayes depending on organism
+
+- Biallelic SNP filtering is useful for:
+
+	- Population genetics
+
+	- GWAS
+
+- For multi-sample datasets:
+
+	- Consider joint variant calling

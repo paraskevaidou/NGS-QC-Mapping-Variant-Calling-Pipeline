@@ -1,52 +1,31 @@
-# NGS QC, Mapping & Variant Calling Pipeline
+# NGS QC, Mapping & Variant Calling Genomics Pipeline
 
-End-to-end Next-Generation Sequencing (NGS) pipeline for:
+This pipeline provides a complete workflow for analyzing Illumina sequencing data in the context of genomics and population genetics. 
+It includes steps for quality assessment, adapter removal, alignment to a reference genome, and variant detection.
+It is optimized for high-performance computing (HPC) environments that utilize module systems such as Slurm.
 
-- Quality control (FastQC)
+The workflow was developed based on teaching material by Prof. Spyridon Papakostas
 
-- Read trimming (Trimmomatic)
-
-- Alignment (BWA-MEM)
-
-- BAM processing (SAMtools)
-
-- Variant calling (FreeBayes)
-
-- Biallelic SNP extraction (VCFtools)
-
-Designed for execution on HPC systems with module environments (e.g. Slurm)
-
+---
 
 # Table of Contents
 
-## Requirements
+- [Requirements](#requirements)
+- [Pipeline Overview](#pipeline-overview)
+- [Step-by-Step Workflow](#step-by-step-workflow)
+  - [0. Download Data](#0-download-data-optional)
+  - [1. Quality Control (Raw Reads)](#1-quality-control-raw-reads)
+  - [2. Trimming](#2-trimming-trimmomatic)
+  - [3. Quality Control (Trimmed Reads)](#3-quality-control-trimmed-reads)
+  - [4. Reference Indexing](#4-reference-indexing)
+  - [5. Mapping (BWA-MEM)](#5-mapping-bwa-mem)
+  - [6. BAM Processing](#6-bam-processing)
+  - [7. Read Count (QC Metric)](#7-read-count-qc-metric)
+  - [8. Variant Calling (FreeBayes)](#8-variant-calling-freebayes)
+  - [9. Extract Biallelic SNPs](#9-extract-biallelic-snps)
+- [Notes](#notes)
 
-## Pipeline Overview
-
-## Step-by-Step Workflow
-
-### 0. Download Data
-
-### 1. Quality Control (Raw Reads)
-
-### 2. Trimming
-
-### 3. Quality Control (Trimmed Reads)
-
-### 4. Reference Indexing
-
-### 5. Mapping (BWA-MEM)
-
-### 6. BAM Processing
-
-### 7. Read Count (QC Metric)
-
-### 8. Variant Calling (FreeBayes)
-
-### 9. Extract Biallelic SNPs
-
-## Notes
-
+---
 
 # Requirements
 
